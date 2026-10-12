@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ trade.market.symbol }} · SixEdge{% endblock %}
+{% block content %}
+
+<h1>{{ trade.market.name }} <span style="color:var(--muted); font-family:var(--font-mono); font-size:16px;">{{ trade.market.symbol }}</span></h1>
+<p class="subtitle">{{ trade.trade_date }} · <span class="tag tag-{{ trade.direction }}">{{ trade.direction }}</span></p>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Outcome</div>
+    <div class="stat-value"><span class="tag tag-{{ trade.outcome }}">{{ trade.outcome }}</span></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Risk : Reward</div>
+    <div class="stat-value amber">{{ ('1:' ~ trade.risk_reward_ratio) if trade.risk_reward_ratio else '—' }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">P/L</div>
+    <div class="stat-value {{ 'mint' if trade.pnl is not none and trade.pnl >= 0 else 'coral' if trade.pnl is not none else '' }}">
+      {{ trade.pnl if trade.pnl is not none else '—' }}
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Plan discipline</div>
+    <div class="stat-value {{ 'mint' if trade.rule_followed else 'coral' }}">{{ 'Kept' if trade.rule_followed else 'Broke' }}</div>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Prices</h2>
+  <table>
+    <tbody>
+      <tr><td>Entry</td><td class="mono">{{ trade.entry_price if trade.entry_price is not none else '—' }}</td></tr>
+      <tr><td>Stop loss</td><td class="mono">{{ trade.stop_loss if trade.stop_loss is not none else '—' }}</td></tr>
+      <tr><td>Take profit</td><td class="mono">{{ trade.take_profit if trade.take_profit is not none else '—' }}</td></tr>
+      <tr><td>Exit</td><td class="mono">{{ trade.exit_price if trade.exit_price is not none else '—' }}</td></tr>
+      <tr><td>Lot size</td><td class="mono">{{ trade.lot_size if trade.lot_size is not none else '—' }}</td></tr>
+      <tr><td>Emotion going in</td><td>{{ trade.emotion or '—' }}</td></tr>
+    </tbody>
+  </table>
+</div>
+
+{% if trade.notes %}
+<div class="panel">
+  <h2>Notes</h2>
+  <p style="white-space:pre-wrap; color:var(--text); line-height:1.6;">{{ trade.notes }}</p>
+</div>
+{% endif %}
+
+<div class="panel">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <h2 style="margin:0;">Chart / setup</h2>
+    {% if trade.image_filename %}
+      <span class="preview-title-badge" style="cursor:pointer;" onclick="openLightbox('{{ url_for('uploaded_file', filename=trade.image_filename) }}', '{{ trade.market.name }} ({{ trade.market.symbol }}) - {{ trade.trade_date }}')">🔍 Click to Expand</span>
+    {% endif %}
+  </div>
+  {% if trade.image_filename %}
+    <div class="preview-img-wrapper" onclick="openLightbox('{{ url_for('uploaded_file', filename=trade.image_filename) }}', '{{ trade.market.name }} ({{ trade.market.symbol }}) - {{ trade.trade_date }}')">
+      <img class="trade-image" style="margin-top:0;" src="{{ url_for('uploaded_file', filename=trade.image_filename) }}" alt="Trade Screenshot">
+    </div>
+  {% else %}
+    <div class="image-placeholder">No screenshot attached to this trade.</div>
+  {% endif %}
+</div>
+
+<div class="actions-row">
+  <a class="btn" href="{{ url_for('trade_edit', trade_id=trade.id) }}">Edit</a>
+  <form method="post" action="{{ url_for('trade_delete', trade_id=trade.id) }}" onsubmit="return confirm('Delete this trade permanently?');">
+    <button class="btn danger" type="submit">Delete</button>
+  </form>
+  <a class="btn secondary" href="{{ url_for('trades_list') }}">Back to journal</a>
+</div>
+
+{% endblock %}

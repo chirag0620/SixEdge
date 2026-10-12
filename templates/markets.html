@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Markets · SixEdge{% endblock %}
+{% block content %}
+
+<h1>Markets</h1>
+<p class="subtitle">The instruments you trade — gold, silver, bitcoin, FX pairs, and anything else.</p>
+
+<form class="panel" method="post">
+  <div class="form-grid">
+    <div class="field">
+      <label>Name</label>
+      <input type="text" name="name" placeholder="e.g. Gold" required>
+    </div>
+    <div class="field">
+      <label>Symbol</label>
+      <input type="text" name="symbol" placeholder="e.g. XAU/USD" required>
+    </div>
+    <div class="field">
+      <label>Category</label>
+      <select name="category">
+        {% for c in categories %}
+          <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="actions-row">
+    <button class="btn" type="submit">Add market</button>
+  </div>
+</form>
+
+<div class="panel">
+  <h2>Your markets</h2>
+  {% if markets %}
+    <div class="market-list">
+      {% for m in markets %}
+        <div class="market-card">
+          <div>
+            <div>{{ m.name }}</div>
+            <div class="sym">{{ m.symbol }}</div>
+            <div class="cat">{{ m.category }}</div>
+          </div>
+          <form method="post" action="{{ url_for('market_delete', market_id=m.id) }}"
+                onsubmit="return confirm('Remove {{ m.name }}?');">
+            <button class="btn small danger" type="submit" title="Only works if no trades are logged against it">✕</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">No markets yet. Add your first one above.</div>
+  {% endif %}
+</div>
+
+{% endblock %}

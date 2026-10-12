@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · SixEdge{% endblock %}
+{% block content %}
+
+<h1>👋 {{ time_greeting }}, {{ current_user.username if current_user else 'Trader' }}!</h1>
+<p class="subtitle">Your discipline & trading performance at a glance.</p>
+
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total trades</div>
+    <div class="stat-value">{{ total_trades }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Win rate</div>
+    <div class="stat-value mint">{{ win_rate ~ '%' if win_rate is not none else '—' }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Avg risk:reward</div>
+    <div class="stat-value amber">{{ ('1 : ' ~ avg_rr) if avg_rr is not none else '—' }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Discipline score</div>
+    <div class="stat-value {{ 'mint' if discipline_score and discipline_score >= 80 else 'coral' if discipline_score is not none else '' }}">
+      {{ (discipline_score ~ '%') if discipline_score is not none else '—' }}
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Current streak</div>
+    <div class="stat-value amber">{{ current_streak }}d</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Net P/L</div>
+    <div class="stat-value {{ 'mint' if total_pnl >= 0 else 'coral' }}">
+      {{ '%.2f' % total_pnl }}
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <h2 style="margin:0;">📈 Account Equity Growth (Cumulative P/L)</h2>
+    <span style="font-size:12.5px; color:var(--muted);">Track your balance growth over time</span>
+  </div>
+  {% if equity_values and equity_values|length > 0 %}
+    <div style="position:relative; width:100%; height:260px;">
+      <canvas id="equityChart"></canvas>
+    </div>
+    <script>
+      document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('equityChart').getContext('2d');
+        const labels = {{ equity_labels | tojson }};
+        const data = {{ equity_values | tojson }};
+
+        const isPositive = data.length > 0 && data[data.length - 1] >= 0;
+        const mainColor = isPositive ? '#3ddc97' : '#ff6b6b';
+
+        const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+        gradient.addColorStop(0, isPositive ? 'rgba(61, 220, 151, 0.35)' : 'rgba(255, 107, 107, 0.35)');
+        gradient.addColorStop(1, 'rgba(17, 20, 26, 0.0)');
+
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Cumulative P/L ($)',
+              data: data,
+              borderColor: mainColor,
+              borderWidth: 2.5,
+              backgroundColor: gradient,
+              fill: true,
+              tension: 0.3,
+              pointBackgroundColor: mainColor,
+              pointRadius: data.length > 30 ? 2 : 4,
+              pointHoverRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: '#1f2430',
+                titleColor: '#e9e7e1',
+                bodyColor: '#3ddc97',
+                borderColor: '#2a2f3b',
+                borderWidth: 1,
+                padding: 10,
+                displayColors: false,
+                callbacks: {
+                  label: function(context) {
+                    const val = context.parsed.y;
+                    return 'Net P/L: ' + (val >= 0 ? '+' : '') + val.toFixed(2);
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: '#2a2f3b', drawBorder: false },
+                ticks: { color: '#8b909c', font: { family: 'monospace', size: 11 } }
+              },
+              y: {
+                grid: { color: '#2a2f3b', drawBorder: false },
+                ticks: { color: '#8b909c', font: { family: 'monospace', size: 11 } }
+              }
+            }
+          }
+        });
+      });
+    </script>
+  {% else %}
+    <div class="empty-state">No P/L data recorded yet. Log trades to see your live equity curve growth!</div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Consistency — last 18 weeks</h2>
+  <div class="heatmap-wrap">
+    <div class="heatmap">
+      {% for cell in heatmap %}
+        {% set level = 0 if cell.count == 0 else (1 if cell.count == 1 else (2 if cell.count == 2 else (3 if cell.count == 3 else 4))) %}
+        <div class="hm-cell" data-level="{{ level }}" title="{{ cell.date }} — {{ cell.count }} trade{{ 's' if cell.count != 1 }}"></div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="heatmap-legend">
+    Less <div class="hm-cell" data-level="0"></div><div class="hm-cell" data-level="1"></div><div class="hm-cell" data-level="2"></div><div class="hm-cell" data-level="3"></div><div class="hm-cell" data-level="4"></div> More
+    <span style="margin-left:16px;">Longest streak: <strong style="color:var(--text)">{{ longest_streak }} day{{ 's' if longest_streak != 1 }}</strong></span>
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Performance by strategy</h2>
+  {% if strategy_stats %}
+    <table>
+      <thead>
+        <tr><th>Strategy</th><th class="mono">Trades</th><th class="mono">Win Rate</th><th class="mono">Net P/L</th></tr>
+      </thead>
+      <tbody>
+        {% for s in strategy_stats %}
+          <tr>
+            <td><span class="strategy-badge">{{ s.name }}</span></td>
+            <td class="mono">{{ s.count }}</td>
+            <td class="mono {{ 'mint' if s.win_rate >= 50 else 'coral' }}">{{ s.win_rate }}%</td>
+            <td class="mono {{ 'mint' if s.net_pnl >= 0 else 'coral' }}">{{ '+' if s.net_pnl > 0 else '' }}{{ '%.2f' % s.net_pnl }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state">No strategy tags assigned to trades yet. Add strategy tags when logging trades!</div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Trades by market</h2>
+  {% if by_market %}
+    <table>
+      <thead><tr><th>Market</th><th class="mono">Trades</th></tr></thead>
+      <tbody>
+        {% for name, count in by_market %}
+          <tr><td>{{ name }}</td><td class="mono">{{ count }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state">No trades logged yet. <a href="{{ url_for('trade_new') }}" style="color:var(--amber)">Log your first trade →</a></div>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h2>Recent activity</h2>
+  {% if recent_trades %}
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Market</th><th>Side</th><th class="mono">RR</th><th>Outcome</th><th>Rules</th></tr>
+      </thead>
+      <tbody>
+        {% for t in recent_trades %}
+        <tr onclick="window.location='{{ url_for('trade_detail', trade_id=t.id) }}'" style="cursor:pointer">
+          <td class="mono">{{ t.trade_date }}</td>
+          <td>{{ t.market.symbol }}</td>
+          <td><span class="tag tag-{{ t.direction }}">{{ t.direction }}</span></td>
+          <td class="mono">{{ ('1:' ~ t.risk_reward_ratio) if t.risk_reward_ratio else '—' }}</td>
+          <td><span class="tag tag-{{ t.outcome }}">{{ t.outcome }}</span></td>
+          <td><span class="tag {{ 'tag-rule-followed' if t.rule_followed else 'tag-rule-broken' }}">{{ 'kept' if t.rule_followed else 'broke' }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="empty-state">Nothing here yet.</div>
+  {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit trade' if trade else 'Log a trade' }} · SixEdge{% endblock %}
+{% block content %}
+
+<h1>{{ 'Edit trade' if trade else 'Log a trade' }}</h1>
+<p class="subtitle">Capture the setup while it's fresh — market, side, risk, and the chart.</p>
+
+<!-- Golden Mindset & Rules Banner with Blinking Animation -->
+<div class="mindset-banner">
+  <div class="mindset-header">
+    <div class="blink-badge">
+      <span class="blink-dot"></span>
+      <span>⚠️ GOLDEN TRADING RULES</span>
+    </div>
+    <span style="font-size:12.5px; color:var(--muted);">Mindset check before entering trade</span>
+  </div>
+
+  <div class="mindset-quote-box">
+    <span class="mindset-quote-text" id="quote-rotator">
+      🧘 <span class="blinking-word">PATIENCE IS KEY:</span> Wait for your perfect setup. No setup = NO trade!
+    </span>
+  </div>
+
+  <div class="mindset-rules-grid">
+    <div class="rule-pill">
+      <span class="pill-tag">RULE 1</span>
+      <span>🧘 <strong class="blinking-word">Patience:</strong> Wait for your strategy setup.</span>
+    </div>
+    <div class="rule-pill">
+      <span class="pill-tag">RULE 2</span>
+      <span>🎯 <strong class="blinking-word">Plan:</strong> Plan the trade, trade the plan.</span>
+    </div>
+    <div class="rule-pill">
+      <span class="pill-tag">RULE 3</span>
+      <span>🛡️ <strong class="blinking-word">Risk:</strong> Protect capital. Never break stop loss.</span>
+    </div>
+    <div class="rule-pill">
+      <span class="pill-tag">RULE 4</span>
+      <span>⚡ <strong class="blinking-word">Discipline:</strong> No revenge or emotional trades.</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Dynamic rotating quotes to keep trader focused
+  const mindsetQuotes = [
+    '🧘 <span class="blinking-word">PATIENCE IS KEY:</span> Wait for your perfect setup. No setup = NO trade!',
+    '🎯 <span class="blinking-word">WAIT FOR PERFECT SETUP:</span> Let the market come to you. Don\'t chase candles!',
+    '🛡️ <span class="blinking-word">PROTECT YOUR CAPITAL:</span> Preservation of capital is victory #1 in trading.',
+    '🧠 <span class="blinking-word">EMOTIONLESS EXECUTION:</span> Stick to your rules. Cut losses fast and let winners run!'
+  ];
+  let currentQuoteIdx = 0;
+  const quoteEl = document.getElementById('quote-rotator');
+  if (quoteEl) {
+    setInterval(() => {
+      quoteEl.style.opacity = 0;
+      setTimeout(() => {
+        currentQuoteIdx = (currentQuoteIdx + 1) % mindsetQuotes.length;
+        quoteEl.innerHTML = mindsetQuotes[currentQuoteIdx];
+        quoteEl.style.opacity = 1;
+      }, 300);
+    }, 4500);
+  }
+</script>
+
+<!-- Interactive Position Sizing & Risk Calculator Widget -->
+<div class="panel calculator-panel" style="background: rgba(31, 36, 48, 0.6); border: 1px solid var(--border); border-left: 4px solid var(--amber); margin-bottom: 22px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+    <h3 style="margin:0; font-size:15px; display:flex; align-items:center; gap:8px;">
+      🧮 <span>Position Size & Risk Calculator</span>
+    </h3>
+    <span style="font-size:11.5px; color:var(--amber); font-family:var(--font-mono); background:rgba(232,176,75,0.12); padding:3px 8px; border-radius:4px;">REALTIME RISK TOOL</span>
+  </div>
+  
+  <div class="calc-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:14px;">
+    <div>
+      <label style="font-size:11.5px; color:var(--muted);">Account Size ($)</label>
+      <input type="number" id="calc-account" value="10000" step="any" oninput="calculatePositionSize()" style="padding:7px 10px; font-size:13.5px; width:100%;">
+    </div>
+    <div>
+      <label style="font-size:11.5px; color:var(--muted);">Risk Percentage (%)</label>
+      <input type="number" id="calc-risk-pct" value="1.0" step="0.1" oninput="calculatePositionSize()" style="padding:7px 10px; font-size:13.5px; width:100%;">
+    </div>
+    <div>
+      <label style="font-size:11.5px; color:var(--muted);">Entry Price</label>
+      <input type="number" id="calc-entry" placeholder="e.g. 1.0850" step="any" oninput="calculatePositionSize()" style="padding:7px 10px; font-size:13.5px; width:100%;">
+    </div>
+    <div>
+      <label style="font-size:11.5px; color:var(--muted);">Stop Loss Price</label>
+      <input type="number" id="calc-sl" placeholder="e.g. 1.0820" step="any" oninput="calculatePositionSize()" style="padding:7px 10px; font-size:13.5px; width:100%;">
+    </div>
+  </div>
+
+  <div class="calc-results-bar" style="display:flex; justify-content:space-between; align-items:center; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:10px 14px; flex-wrap:wrap; gap:10px;">
+    <div style="font-size:13.5px;">
+      💵 Max $ Risk: <strong id="calc-res-risk" style="color:var(--coral); font-family:var(--font-mono)">$100.00</strong>
+    </div>
+    <div style="font-size:13.5px;">
+      📦 Recommended Lot Size: <strong id="calc-res-lots" style="color:var(--mint); font-family:var(--font-mono)">Enter Entry & SL</strong>
+    </div>
+    <button type="button" class="btn secondary small" onclick="applyCalcToForm()" style="background:var(--amber); color:#1a1305; font-weight:600; border:none; padding:7px 14px; cursor:pointer;">
+      ⚡ Apply Lot Size to Form
+    </button>
+  </div>
+</div>
+
+<script>
+  function calculatePositionSize() {
+    const account = parseFloat(document.getElementById('calc-account').value) || 0;
+    const riskPct = parseFloat(document.getElementById('calc-risk-pct').value) || 0;
+    const formEntry = parseFloat(document.querySelector('input[name="entry_price"]')?.value);
+    const formSl = parseFloat(document.querySelector('input[name="stop_loss"]')?.value);
+
+    let entry = parseFloat(document.getElementById('calc-entry').value);
+    if (isNaN(entry) && !isNaN(formEntry)) entry = formEntry;
+
+    let sl = parseFloat(document.getElementById('calc-sl').value);
+    if (isNaN(sl) && !isNaN(formSl)) sl = formSl;
+
+    const riskAmount = (account * riskPct) / 100;
+    document.getElementById('calc-res-risk').textContent = '$' + riskAmount.toFixed(2);
+
+    if (entry > 0 && sl > 0 && entry !== sl) {
+      const priceDiff = Math.abs(entry - sl);
+      const lotSize = riskAmount / (priceDiff * 100);
+      document.getElementById('calc-res-lots').textContent = lotSize.toFixed(2) + ' Lots';
+    } else {
+      document.getElementById('calc-res-lots').textContent = 'Enter Entry & SL';
+    }
+  }
+
+  function applyCalcToForm() {
+    const lotText = document.getElementById('calc-res-lots').textContent;
+    const lots = parseFloat(lotText);
+    if (!isNaN(lots) && lots > 0) {
+      const lotInput = document.querySelector('input[name="lot_size"]');
+      if (lotInput) {
+        lotInput.value = lots.toFixed(2);
+        lotInput.style.borderColor = 'var(--mint)';
+        setTimeout(() => lotInput.style.borderColor = '', 1500);
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const formEntryInput = document.querySelector('input[name="entry_price"]');
+    const formSlInput = document.querySelector('input[name="stop_loss"]');
+    if (formEntryInput) formEntryInput.addEventListener('input', calculatePositionSize);
+    if (formSlInput) formSlInput.addEventListener('input', calculatePositionSize);
+  });
+</script>
+
+<form class="panel" method="post" enctype="multipart/form-data">
+  <div class="form-grid">
+
+    <div class="field">
+      <label>Market</label>
+      <select name="market_id" required>
+        <option value="">Select a market</option>
+        {% for m in markets %}
+          <option value="{{ m.id }}" {{ 'selected' if trade and trade.market_id == m.id }}>{{ m.name }} ({{ m.symbol }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Date</label>
+      <input type="date" name="trade_date" value="{{ today }}" required>
+    </div>
+
+    <div class="field">
+      <label>Side</label>
+      <select name="direction" required>
+        <option value="buy" {{ 'selected' if trade and trade.direction=='buy' }}>Buy</option>
+        <option value="sell" {{ 'selected' if trade and trade.direction=='sell' }}>Sell</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Outcome</label>
+      <select name="outcome">
+        <option value="open" {{ 'selected' if trade and trade.outcome=='open' }}>Open</option>
+        <option value="win" {{ 'selected' if trade and trade.outcome=='win' }}>Win</option>
+        <option value="loss" {{ 'selected' if trade and trade.outcome=='loss' }}>Loss</option>
+        <option value="breakeven" {{ 'selected' if trade and trade.outcome=='breakeven' }}>Breakeven</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Entry price</label>
+      <input type="number" step="any" name="entry_price" value="{{ trade.entry_price if trade else '' }}">
+    </div>
+
+    <div class="field">
+      <label>Stop loss</label>
+      <input type="number" step="any" name="stop_loss" value="{{ trade.stop_loss if trade else '' }}">
+    </div>
+
+    <div class="field">
+      <label>Take profit</label>
+      <input type="number" step="any" name="take_profit" value="{{ trade.take_profit if trade else '' }}">
+    </div>
+
+    <div class="field">
+      <label>Exit price</label>
+      <input type="number" step="any" name="exit_price" value="{{ trade.exit_price if trade else '' }}">
+    </div>
+
+    <div class="field">
+      <label>Risk : Reward (leave blank to auto-calc from prices)</label>
+      <input type="number" step="any" name="risk_reward_ratio" value="{{ trade.risk_reward_ratio if trade else '' }}" placeholder="e.g. 2.5">
+    </div>
+
+    <div class="field">
+      <label>Lot size</label>
+      <input type="number" step="any" name="lot_size" value="{{ trade.lot_size if trade else '' }}">
+    </div>
+
+    <div class="field">
+      <label>P/L (account currency)</label>
+      <input type="number" step="any" name="pnl" value="{{ trade.pnl if trade else '' }}">
+    </div>
+
+    <div class="field">
+      <label>Strategy / Setup Tag</label>
+      <select name="strategy">
+        <option value="">Select a strategy</option>
+        {% for s in strategies %}
+          <option value="{{ s }}" {{ 'selected' if trade and trade.strategy == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Emotion going in</label>
+      <select name="emotion">
+        <option value="">—</option>
+        {% for e in emotions %}
+          <option value="{{ e }}" {{ 'selected' if trade and trade.emotion == e }}>{{ e }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label>&nbsp;</label>
+      <div class="checkbox-row">
+        <input type="checkbox" name="rule_followed" id="rule_followed"
+          {{ 'checked' if (trade and trade.rule_followed) or not trade }}>
+        <label for="rule_followed" style="margin:0;">I followed my trading plan on this trade</label>
+      </div>
+    </div>
+
+    <div class="field full">
+      <label>Notes — setup, reasoning, lesson</label>
+      <textarea name="notes">{{ trade.notes if trade else '' }}</textarea>
+    </div>
+
+    <div class="field full">
+      <label>Chart / setup screenshot</label>
+
+      <div class="file-upload-zone" id="upload-zone">
+        <input type="file" name="image" id="image-input" accept="image/*" onchange="handleFileSelect(this)">
+        <div class="file-upload-content">
+          <div class="file-upload-icon">📷</div>
+          <div class="file-upload-title" id="upload-title">
+            {{ 'Click or drag a new chart screenshot to replace' if (trade and trade.image_filename) else 'Click or drag chart screenshot here to upload' }}
+          </div>
+          <div class="file-upload-subtitle">Supports PNG, JPG, JPEG, WEBP or GIF</div>
+        </div>
+      </div>
+
+      <!-- Live Photo View Preview Container -->
+      <div id="image-preview-container" class="image-preview-card" style="display: {{ 'flex' if (trade and trade.image_filename) else 'none' }};">
+        <div class="preview-header">
+          <span class="preview-title-badge" id="preview-badge">
+            {{ 'Current Screenshot' if (trade and trade.image_filename) else 'Selected Preview' }}
+          </span>
+          <div class="preview-actions">
+            <button type="button" class="btn secondary small" onclick="triggerLightboxFromPreview()">🔍 Full View</button>
+            <button type="button" class="btn danger small" onclick="clearSelectedImage()">✕ Remove</button>
+          </div>
+        </div>
+
+        <div class="preview-img-wrapper" onclick="triggerLightboxFromPreview()" title="Click to open full photo view">
+          <img id="preview-img-element" 
+               src="{{ url_for('uploaded_file', filename=trade.image_filename) if (trade and trade.image_filename) else '' }}" 
+               alt="Chart Preview">
+        </div>
+
+        <div class="preview-meta">
+          <span id="preview-filename">{{ trade.image_filename if (trade and trade.image_filename) else '' }}</span>
+          <span id="preview-filesize"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="actions-row">
+    <button class="btn" type="submit">{{ 'Save changes' if trade else 'Save trade' }}</button>
+    <a class="btn secondary" href="{{ url_for('trades_list') }}">Cancel</a>
+  </div>
+</form>
+
+<script>
+  let currentObjectUrl = null;
+
+  function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return '';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
+  function handleFileSelect(input) {
+    const container = document.getElementById('image-preview-container');
+    const imgEl = document.getElementById('preview-img-element');
+    const fileNameEl = document.getElementById('preview-filename');
+    const fileSizeEl = document.getElementById('preview-filesize');
+    const badgeEl = document.getElementById('preview-badge');
+
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+      }
+      currentObjectUrl = URL.createObjectURL(file);
+      
+      imgEl.src = currentObjectUrl;
+      fileNameEl.textContent = file.name;
+      fileSizeEl.textContent = formatBytes(file.size);
+      badgeEl.textContent = 'New Selected Photo';
+      container.style.display = 'flex';
+    }
+  }
+
+  function clearSelectedImage() {
+    const input = document.getElementById('image-input');
+    const container = document.getElementById('image-preview-container');
+    const imgEl = document.getElementById('preview-img-element');
+    
+    input.value = '';
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = null;
+    }
+    
+    {% if trade and trade.image_filename %}
+      // Reset back to original uploaded image
+      imgEl.src = "{{ url_for('uploaded_file', filename=trade.image_filename) }}";
+      document.getElementById('preview-filename').textContent = "{{ trade.image_filename }}";
+      document.getElementById('preview-filesize').textContent = "";
+      document.getElementById('preview-badge').textContent = 'Current Screenshot';
+    {% else %}
+      imgEl.src = '';
+      container.style.display = 'none';
+    {% endif %}
+  }
+
+  function triggerLightboxFromPreview() {
+    const imgEl = document.getElementById('preview-img-element');
+    const fileNameEl = document.getElementById('preview-filename');
+    if (imgEl && imgEl.src) {
+      openLightbox(imgEl.src, fileNameEl.textContent || 'Chart Screenshot View');
+    }
+  }
+
+  // Drag and drop hover effect
+  const uploadZone = document.getElementById('upload-zone');
+  if (uploadZone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); }, false);
+    });
+    ['dragleave', 'drop'].forEach(eventName => {
+      uploadZone.addEventListener(eventName, (e) => { e.preventDefault(); uploadZone.classList.remove('dragover'); }, false);
+    });
+  }
+</script>
+
+{% endblock %}

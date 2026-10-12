@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Journal · SixEdge{% endblock %}
+{% block content %}
+
+<h1>Journal</h1>
+<p class="subtitle">Every trade you've logged, in one place.</p>
+
+<form class="filter-bar" method="get">
+  <select name="market_id" onchange="this.form.submit()">
+    <option value="">All markets</option>
+    {% for m in markets %}
+      <option value="{{ m.id }}" {{ 'selected' if selected_market == m.id }}>{{ m.symbol }}</option>
+    {% endfor %}
+  </select>
+  <select name="direction" onchange="this.form.submit()">
+    <option value="">Buy & sell</option>
+    <option value="buy" {{ 'selected' if selected_direction == 'buy' }}>Buy only</option>
+    <option value="sell" {{ 'selected' if selected_direction == 'sell' }}>Sell only</option>
+  </select>
+  <select name="outcome" onchange="this.form.submit()">
+    <option value="">All outcomes</option>
+    <option value="win" {{ 'selected' if selected_outcome == 'win' }}>Win</option>
+    <option value="loss" {{ 'selected' if selected_outcome == 'loss' }}>Loss</option>
+    <option value="breakeven" {{ 'selected' if selected_outcome == 'breakeven' }}>Breakeven</option>
+    <option value="open" {{ 'selected' if selected_outcome == 'open' }}>Open</option>
+  </select>
+  <select name="strategy" onchange="this.form.submit()">
+    <option value="">All strategies</option>
+    {% for s in strategies %}
+      <option value="{{ s }}" {{ 'selected' if selected_strategy == s }}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <a href="{{ url_for('trade_new') }}" class="btn small">+ Log a trade</a>
+</form>
+
+{% if trades %}
+<div class="panel" style="padding:0; overflow-x:auto;">
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th><th>Market</th><th>Side</th><th>Strategy</th><th class="mono">Entry</th>
+        <th class="mono">RR</th><th class="mono">P/L</th><th>Outcome</th><th>Rules</th><th>Shot</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in trades %}
+      <tr onclick="window.location='{{ url_for('trade_detail', trade_id=t.id) }}'" style="cursor:pointer">
+        <td class="mono">{{ t.trade_date }}</td>
+        <td>{{ t.market.symbol }}</td>
+        <td><span class="tag tag-{{ t.direction }}">{{ t.direction }}</span></td>
+        <td><span class="strategy-badge">{{ t.strategy or '—' }}</span></td>
+        <td class="mono">{{ t.entry_price if t.entry_price is not none else '—' }}</td>
+        <td class="mono">{{ ('1:' ~ t.risk_reward_ratio) if t.risk_reward_ratio else '—' }}</td>
+        <td class="mono">{{ t.pnl if t.pnl is not none else '—' }}</td>
+        <td><span class="tag tag-{{ t.outcome }}">{{ t.outcome }}</span></td>
+        <td><span class="tag {{ 'tag-rule-followed' if t.rule_followed else 'tag-rule-broken' }}">{{ 'kept' if t.rule_followed else 'broke' }}</span></td>
+        <td>
+          {% if t.image_filename %}
+            <span style="font-size:16px; cursor:pointer;" onclick="event.stopPropagation(); openLightbox('{{ url_for('uploaded_file', filename=t.image_filename) }}', '{{ t.market.symbol }} - {{ t.trade_date }}')" title="Click to view photo">🖼️</span>
+          {% else %}
+            —
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+  <div class="empty-state">No trades match yet. <a href="{{ url_for('trade_new') }}" style="color:var(--amber)">Log one →</a></div>
+{% endif %}
+
+{% endblock %}
